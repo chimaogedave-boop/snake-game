@@ -77,6 +77,44 @@ h1 {
   margin-bottom: 20px;
 }
 
+.settings {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+.setting {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+  border-radius: 18px;
+  background: #f0ead9;
+}
+
+.setting select,
+.setting input {
+  font: inherit;
+}
+
+.setting select {
+  border: 1px solid #cbbfa6;
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: #fffaf0;
+}
+
+.setting-toggle {
+  justify-content: space-between;
+}
+
+.setting-toggle input {
+  width: 22px;
+  height: 22px;
+  accent-color: var(--accent);
+}
+
 .stat-card {
   padding: 16px;
   border-radius: 18px;
@@ -152,6 +190,11 @@ button:hover {
   align-items: center;
 }
 
+.board-wrap {
+  position: relative;
+  width: min(500px, 100%);
+}
+
 canvas {
   width: min(500px, 100%);
   height: auto;
@@ -159,6 +202,38 @@ canvas {
   border: 8px solid #e0d6bd;
   border-radius: 20px;
   touch-action: none;
+}
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(20, 28, 22, 0.6);
+  border-radius: 20px;
+}
+
+.hidden {
+  display: none;
+}
+
+.overlay-card {
+  width: min(300px, 100%);
+  padding: 24px;
+  text-align: center;
+  border-radius: 22px;
+  background: #fffaf0;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.18);
+}
+
+.overlay-kicker {
+  margin-bottom: 8px;
+  font-size: 0.8rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--accent-dark);
 }
 
 .touch-controls {
@@ -221,5 +296,9 @@ canvas {
 
   .touch-controls {
     width: min(280px, 100%);
+  }
+
+  .settings {
+    grid-template-columns: 1fr;
   }
 }

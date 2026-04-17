@@ -27,13 +27,30 @@
         </div>
       </div>
 
+      <div class="settings">
+        <label class="setting">
+          <span class="label">Difficulty</span>
+          <select id="difficulty-select">
+            <option value="easy">Easy</option>
+            <option value="normal" selected>Normal</option>
+            <option value="hard">Hard</option>
+          </select>
+        </label>
+
+        <label class="setting setting-toggle" for="wrap-toggle">
+          <span class="label">Wrap Walls</span>
+          <input id="wrap-toggle" type="checkbox">
+        </label>
+      </div>
+
       <div class="controls">
         <button id="start-button" type="button">Start Game</button>
+        <button id="pause-button" type="button">Pause</button>
         <button id="reset-button" type="button">Reset</button>
       </div>
 
       <p class="mobile-note">
-        On phones, use the touch controls under the board.
+        On phones, swipe on the board or use the touch controls under it.
       </p>
 
       <div class="tips">
@@ -43,12 +60,23 @@
           <li>The snake is stored as a list of grid cells.</li>
           <li>Each game tick adds a new head and removes the tail.</li>
           <li>If the snake eats food, we skip removing the tail once.</li>
+          <li>Press P on desktop to pause or resume quickly.</li>
         </ul>
       </div>
     </section>
 
     <section class="board-panel">
-      <canvas id="game" width="500" height="500" aria-label="Snake game board"></canvas>
+      <div class="board-wrap">
+        <canvas id="game" width="500" height="500" aria-label="Snake game board"></canvas>
+        <div id="game-over-overlay" class="overlay hidden" aria-live="polite">
+          <div class="overlay-card">
+            <p class="overlay-kicker">Round Finished</p>
+            <h2>Game Over</h2>
+            <p>Your score: <strong id="final-score">0</strong></p>
+            <button id="overlay-restart-button" type="button">Play Again</button>
+          </div>
+        </div>
+      </div>
       <div class="touch-controls" aria-label="Touch controls for snake movement">
         <button class="touch-button touch-up" type="button" data-direction="up">Up</button>
         <button class="touch-button touch-left" type="button" data-direction="left">Left</button>

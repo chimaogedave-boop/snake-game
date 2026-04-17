@@ -4,12 +4,25 @@ const scoreElement = document.getElementById("score");
 const bestScoreElement = document.getElementById("best-score");
 const statusElement = document.getElementById("status");
 const startButton = document.getElementById("start-button");
+const pauseButton = document.getElementById("pause-button");
 const resetButton = document.getElementById("reset-button");
 const touchButtons = document.querySelectorAll(".touch-button");
+const difficultySelect = document.getElementById("difficulty-select");
+const wrapToggle = document.getElementById("wrap-toggle");
+const overlayElement = document.getElementById("game-over-overlay");
+const finalScoreElement = document.getElementById("final-score");
+const overlayRestartButton = document.getElementById("overlay-restart-button");
 
 const gridSize = 20;
 const tileSize = canvas.width / gridSize;
-const tickSpeed = 140;
+const difficultySpeeds = {
+  easy: 190,
+  normal: 140,
+  hard: 95
+};
+const specialFoodChance = 0.22;
+const speedStep = 6;
+const minTickSpeed = 70;
 
 let snake;
 let direction;
@@ -20,6 +33,10 @@ let bestScore = Number(localStorage.getItem("snake-best-score")) || 0;
 let gameInterval = null;
 let isRunning = false;
 let isGameOver = false;
+let isPaused = false;
+let currentTickSpeed = difficultySpeeds.normal;
+let audioContext = null;
+let touchStartPoint = null;
 
 bestScoreElement.textContent = String(bestScore);
 
@@ -37,10 +54,14 @@ function resetGame() {
   nextDirection = { x: 1, y: 0 };
   score = 0;
   food = spawnFood();
+  currentTickSpeed = getTickSpeed();
   updateScore();
   statusElement.textContent = "Press Start to begin.";
   isRunning = false;
   isGameOver = false;
+  isPaused = false;
+  pauseButton.textContent = "Pause";
+  hideOverlay();
 
   if (gameInterval) {
     clearInterval(gameInterval);
@@ -60,18 +81,50 @@ function startGame() {
   }
 
   isRunning = true;
-  statusElement.textContent = "Game in progress.";
-  gameInterval = setInterval(gameLoop, tickSpeed);
+  isPaused = false;
+  pauseButton.textContent = "Pause";
+  statusElement.textContent = buildStatusMessage("Game in progress.");
+  restartLoop();
+}
+
+function pauseGame() {
+  if (!isRunning) {
+    return;
+  }
+
+  isRunning = false;
+  isPaused = true;
+  clearInterval(gameInterval);
+  gameInterval = null;
+  pauseButton.textContent = "Resume";
+  statusElement.textContent = "Game paused.";
+}
+
+function resumeGame() {
+  if (!isPaused || isGameOver) {
+    return;
+  }
+
+  isRunning = true;
+  isPaused = false;
+  pauseButton.textContent = "Pause";
+  statusElement.textContent = buildStatusMessage("Game in progress.");
+  restartLoop();
+}
+
+function togglePause() {
+  if (isRunning) {
+    pauseGame();
+  } else if (isPaused) {
+    resumeGame();
+  }
 }
 
 function gameLoop() {
   direction = nextDirection;
 
   const head = snake[0];
-  const newHead = {
-    x: head.x + direction.x,
-    y: head.y + direction.y
-  };
+  const newHead = getNextHeadPosition(head);
 
   const willEatFood = newHead.x === food.x && newHead.y === food.y;
 
@@ -83,10 +136,14 @@ function gameLoop() {
   snake.unshift(newHead);
 
   if (willEatFood) {
-    score += 1;
+    const ateSpecialFood = food.type === "special";
+    score += food.points;
     updateScore();
+    playTone(ateSpecialFood ? 720 : 520, 0.08, "triangle");
     food = spawnFood();
-    statusElement.textContent = "Nice. Keep going.";
+    statusElement.textContent = buildStatusMessage(
+      ateSpecialFood ? "Lucky find. Keep going." : "Nice. Keep going."
+    );
   } else {
     snake.pop();
   }
@@ -95,6 +152,10 @@ function gameLoop() {
 }
 
 function hitsWall(position) {
+  if (wrapToggle.checked) {
+    return false;
+  }
+
   return (
     position.x < 0 ||
     position.x >= gridSize ||
@@ -120,11 +181,14 @@ function spawnFood() {
     };
   } while (snake && snake.some((segment) => segment.x === newFood.x && segment.y === newFood.y));
 
+  newFood.type = Math.random() < specialFoodChance ? "special" : "normal";
+  newFood.points = newFood.type === "special" ? 3 : 1;
   return newFood;
 }
 
 function updateScore() {
   scoreElement.textContent = String(score);
+  updateGameSpeed();
 
   if (score > bestScore) {
     bestScore = score;
@@ -136,9 +200,14 @@ function updateScore() {
 function endGame() {
   isRunning = false;
   isGameOver = true;
+  isPaused = false;
   clearInterval(gameInterval);
   gameInterval = null;
+  pauseButton.textContent = "Pause";
   statusElement.textContent = "Game over. Press Start to try again.";
+  finalScoreElement.textContent = String(score);
+  showOverlay();
+  playTone(180, 0.18, "sawtooth");
 }
 
 function drawGame() {
@@ -159,7 +228,7 @@ function drawBoard() {
 }
 
 function drawFood() {
-  context.fillStyle = "#c84b31";
+  context.fillStyle = food.type === "special" ? "#d49b18" : "#c84b31";
   context.beginPath();
   context.arc(
     food.x * tileSize + tileSize / 2,
@@ -169,6 +238,18 @@ function drawFood() {
     Math.PI * 2
   );
   context.fill();
+
+  if (food.type === "special") {
+    context.fillStyle = "#fff7d6";
+    context.font = `${tileSize * 0.55}px Trebuchet MS`;
+    context.textAlign = "center";
+    context.textBaseline = "middle";
+    context.fillText(
+      "*",
+      food.x * tileSize + tileSize / 2,
+      food.y * tileSize + tileSize / 2 + 1
+    );
+  }
 }
 
 function drawSnake() {
@@ -223,6 +304,8 @@ document.addEventListener("keydown", (event) => {
     handleDirectionInput("right");
   } else if (key === " ") {
     startGame();
+  } else if (key === "p") {
+    togglePause();
   }
 });
 
@@ -230,13 +313,146 @@ touchButtons.forEach((button) => {
   button.addEventListener("click", () => {
     handleDirectionInput(button.dataset.direction);
 
-    if (!isRunning) {
+    if (!isRunning && !isPaused) {
       startGame();
     }
   });
 });
 
+canvas.addEventListener("touchstart", (event) => {
+  const touch = event.changedTouches[0];
+  touchStartPoint = { x: touch.clientX, y: touch.clientY };
+}, { passive: true });
+
+canvas.addEventListener("touchend", (event) => {
+  if (!touchStartPoint) {
+    return;
+  }
+
+  const touch = event.changedTouches[0];
+  const deltaX = touch.clientX - touchStartPoint.x;
+  const deltaY = touch.clientY - touchStartPoint.y;
+  const absX = Math.abs(deltaX);
+  const absY = Math.abs(deltaY);
+  const threshold = 20;
+
+  touchStartPoint = null;
+
+  if (Math.max(absX, absY) < threshold) {
+    return;
+  }
+
+  if (absX > absY) {
+    handleDirectionInput(deltaX > 0 ? "right" : "left");
+  } else {
+    handleDirectionInput(deltaY > 0 ? "down" : "up");
+  }
+
+  if (!isRunning && !isPaused) {
+    startGame();
+  }
+}, { passive: true });
+
+difficultySelect.addEventListener("change", () => {
+  currentTickSpeed = getTickSpeed();
+
+  if (isRunning) {
+    restartLoop();
+    statusElement.textContent = buildStatusMessage("Difficulty updated.");
+  }
+});
+
+wrapToggle.addEventListener("change", () => {
+  statusElement.textContent = buildStatusMessage(
+    wrapToggle.checked ? "Wrap mode on." : "Wrap mode off."
+  );
+});
+
 startButton.addEventListener("click", startGame);
+pauseButton.addEventListener("click", togglePause);
 resetButton.addEventListener("click", resetGame);
+overlayRestartButton.addEventListener("click", () => {
+  resetGame();
+  startGame();
+});
 
 resetGame();
+
+function getTickSpeed() {
+  const baseSpeed = difficultySpeeds[difficultySelect.value] || difficultySpeeds.normal;
+  return Math.max(minTickSpeed, baseSpeed - score * speedStep);
+}
+
+function updateGameSpeed() {
+  const nextTickSpeed = getTickSpeed();
+
+  if (nextTickSpeed !== currentTickSpeed) {
+    currentTickSpeed = nextTickSpeed;
+
+    if (isRunning) {
+      restartLoop();
+    }
+  }
+}
+
+function restartLoop() {
+  clearInterval(gameInterval);
+  gameInterval = setInterval(gameLoop, currentTickSpeed);
+}
+
+function getNextHeadPosition(head) {
+  const nextPosition = {
+    x: head.x + direction.x,
+    y: head.y + direction.y
+  };
+
+  if (wrapToggle.checked) {
+    nextPosition.x = (nextPosition.x + gridSize) % gridSize;
+    nextPosition.y = (nextPosition.y + gridSize) % gridSize;
+  }
+
+  return nextPosition;
+}
+
+function buildStatusMessage(message) {
+  return `${message} Speed: ${Math.round(1000 / currentTickSpeed)} tiles/sec.`;
+}
+
+function showOverlay() {
+  overlayElement.classList.remove("hidden");
+}
+
+function hideOverlay() {
+  overlayElement.classList.add("hidden");
+}
+
+function playTone(frequency, duration, type) {
+  const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+
+  if (!AudioContextClass) {
+    return;
+  }
+
+  if (!audioContext) {
+    audioContext = new AudioContextClass();
+  }
+
+  if (audioContext.state === "suspended") {
+    audioContext.resume();
+  }
+
+  const oscillator = audioContext.createOscillator();
+  const gainNode = audioContext.createGain();
+  const now = audioContext.currentTime;
+
+  oscillator.type = type;
+  oscillator.frequency.setValueAtTime(frequency, now);
+  gainNode.gain.setValueAtTime(0.001, now);
+  gainNode.gain.exponentialRampToValueAtTime(0.08, now + 0.01);
+  gainNode.gain.exponentialRampToValueAtTime(0.001, now + duration);
+
+  oscillator.connect(gainNode);
+  gainNode.connect(audioContext.destination);
+  oscillator.start(now);
+  oscillator.stop(now + duration);
+}
