@@ -5,6 +5,7 @@ const bestScoreElement = document.getElementById("best-score");
 const statusElement = document.getElementById("status");
 const startButton = document.getElementById("start-button");
 const resetButton = document.getElementById("reset-button");
+const touchButtons = document.querySelectorAll(".touch-button");
 
 const gridSize = 20;
 const tileSize = canvas.width / gridSize;
@@ -193,6 +194,18 @@ function setDirection(newX, newY) {
   }
 }
 
+function handleDirectionInput(directionName) {
+  if (directionName === "up") {
+    setDirection(0, -1);
+  } else if (directionName === "down") {
+    setDirection(0, 1);
+  } else if (directionName === "left") {
+    setDirection(-1, 0);
+  } else if (directionName === "right") {
+    setDirection(1, 0);
+  }
+}
+
 document.addEventListener("keydown", (event) => {
   const key = event.key.toLowerCase();
 
@@ -201,16 +214,26 @@ document.addEventListener("keydown", (event) => {
   }
 
   if (key === "arrowup" || key === "w") {
-    setDirection(0, -1);
+    handleDirectionInput("up");
   } else if (key === "arrowdown" || key === "s") {
-    setDirection(0, 1);
+    handleDirectionInput("down");
   } else if (key === "arrowleft" || key === "a") {
-    setDirection(-1, 0);
+    handleDirectionInput("left");
   } else if (key === "arrowright" || key === "d") {
-    setDirection(1, 0);
+    handleDirectionInput("right");
   } else if (key === " ") {
     startGame();
   }
+});
+
+touchButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    handleDirectionInput(button.dataset.direction);
+
+    if (!isRunning) {
+      startGame();
+    }
+  });
 });
 
 startButton.addEventListener("click", startGame);

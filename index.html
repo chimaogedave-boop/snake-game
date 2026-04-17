@@ -32,6 +32,10 @@
         <button id="reset-button" type="button">Reset</button>
       </div>
 
+      <p class="mobile-note">
+        On phones, use the touch controls under the board.
+      </p>
+
       <div class="tips">
         <h2>How It Works</h2>
         <ul>
@@ -45,6 +49,12 @@
 
     <section class="board-panel">
       <canvas id="game" width="500" height="500" aria-label="Snake game board"></canvas>
+      <div class="touch-controls" aria-label="Touch controls for snake movement">
+        <button class="touch-button touch-up" type="button" data-direction="up">Up</button>
+        <button class="touch-button touch-left" type="button" data-direction="left">Left</button>
+        <button class="touch-button touch-right" type="button" data-direction="right">Right</button>
+        <button class="touch-button touch-down" type="button" data-direction="down">Down</button>
+      </div>
       <p id="status" class="status">Press Start to begin.</p>
     </section>
   </main>
